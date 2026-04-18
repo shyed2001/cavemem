@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { expand } from '@cavemem/compress';
 import { loadSettings, resolveDataDir } from '@cavemem/config';
 import { MemoryStore } from '@cavemem/core';
@@ -57,9 +59,19 @@ export async function start(): Promise<void> {
   process.stderr.write(`[cavemem worker] listening on http://127.0.0.1:${settings.workerPort}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainEntry()) {
   start().catch((err) => {
     process.stderr.write(`[cavemem worker] fatal: ${String(err)}\n`);
     process.exit(1);
   });
+}
+
+function isMainEntry(): boolean {
+  const argv = process.argv[1];
+  if (!argv) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(argv)).href;
+  } catch {
+    return import.meta.url === pathToFileURL(argv).href;
+  }
 }

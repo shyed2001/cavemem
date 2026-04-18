@@ -1,6 +1,6 @@
 {
   "name": "cavemem",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "description": "Cross-agent persistent memory with compressed storage. Plug-and-play memory for Claude Code, Gemini CLI, OpenCode, Codex, and Cursor.",
   "keywords": [
@@ -38,6 +38,8 @@
     "dev": "tsup --watch --onSuccess \"node dist/index.js\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "stage-publish": "node scripts/prepack.mjs",
+    "prepublishOnly": "node scripts/prepack.mjs",
     "pack:release": "pnpm build && node scripts/pack-release.mjs",
     "publish:release": "pnpm pack:release && npm publish ./release --access public"
   },

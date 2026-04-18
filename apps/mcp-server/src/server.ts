@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { loadSettings, resolveDataDir } from '@cavemem/config';
 import { MemoryStore } from '@cavemem/core';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -82,10 +84,20 @@ async function main(): Promise<void> {
   await server.connect(transport);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainEntry()) {
   main().catch((err) => {
     // stderr only — stdout is reserved for the MCP protocol.
     process.stderr.write(`[cavemem mcp] fatal: ${String(err)}\n`);
     process.exit(1);
   });
+}
+
+function isMainEntry(): boolean {
+  const argv = process.argv[1];
+  if (!argv) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(argv)).href;
+  } catch {
+    return import.meta.url === pathToFileURL(argv).href;
+  }
 }

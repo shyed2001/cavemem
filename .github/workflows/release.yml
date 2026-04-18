@@ -25,8 +25,20 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
+
       - run: pnpm install --frozen-lockfile
+
+      # The same four gates we enforce locally — block the release if any fail.
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
       - run: pnpm build
+
+      # End-to-end check of the actual published artifact: pack, install -g
+      # into an isolated prefix, drive every hook event, verify MCP launches,
+      # confirm better-sqlite3 loads. Catches the things unit tests cannot.
+      - run: bash scripts/e2e-publish.sh
+
       - uses: changesets/action@v1
         with:
           publish: pnpm release

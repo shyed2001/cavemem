@@ -52,6 +52,7 @@ export class MemoryStore {
   }): number {
     const redacted = redactPrivate(p.content);
     if (!redacted.trim()) return -1;
+    this.ensureSession(p.session_id);
     const intensity = this.settings.compression.intensity;
     const compressed = compress(redacted, { intensity });
     const obs: NewObservation = {
@@ -67,6 +68,7 @@ export class MemoryStore {
 
   addSummary(p: { session_id: string; scope: 'turn' | 'session'; content: string }): number {
     const redacted = redactPrivate(p.content);
+    this.ensureSession(p.session_id);
     const intensity = this.settings.compression.intensity;
     const out = compress(redacted, { intensity });
     return this.storage.insertSummary({
@@ -75,6 +77,24 @@ export class MemoryStore {
       content: out,
       compressed: true,
       intensity,
+    });
+  }
+
+  /**
+   * Idempotently materialise a sessions row before inserting child rows.
+   * Claude Code does not guarantee that SessionStart fires before the first
+   * UserPromptSubmit / PostToolUse — for example when cavemem is installed
+   * mid-session, when a hook earlier in the chain fails, or when a user
+   * resumes a session whose SessionStart was lost. Without this guard,
+   * observations and summaries hit `FOREIGN KEY constraint failed`.
+   */
+  private ensureSession(id: string): void {
+    this.storage.createSession({
+      id,
+      ide: 'unknown',
+      cwd: null,
+      started_at: Date.now(),
+      metadata: null,
     });
   }
 

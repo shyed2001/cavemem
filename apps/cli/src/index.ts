@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { Command } from 'commander';
 import { registerCompressCommands } from './commands/compress.js';
 import { registerDoctorCommand } from './commands/doctor.js';
@@ -32,11 +35,27 @@ export function createProgram(): Command {
   return program;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainEntry()) {
   createProgram()
     .parseAsync(process.argv)
     .catch((err) => {
       process.stderr.write(`cavemem error: ${err instanceof Error ? err.message : String(err)}\n`);
       process.exit(1);
     });
+}
+
+/**
+ * Detects whether this module is the process entrypoint. The naive
+ * `import.meta.url === file://${process.argv[1]}` check is wrong when the
+ * binary is invoked through an npm-installed symlink, because argv[1] is the
+ * symlink path while import.meta.url resolves to the real file.
+ */
+function isMainEntry(): boolean {
+  const argv = process.argv[1];
+  if (!argv) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(argv)).href;
+  } catch {
+    return import.meta.url === pathToFileURL(argv).href;
+  }
 }

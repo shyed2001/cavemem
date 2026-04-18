@@ -127,6 +127,37 @@ describe('runHook', () => {
     expect(r.error).toBeTruthy();
   });
 
+  it('hooks survive when SessionStart never fired (mid-session install)', async () => {
+    // No session-start for "orphan" — Claude Code installed after the session
+    // was already running. Each downstream hook must materialise the session
+    // row itself instead of crashing on FOREIGN KEY constraint failed.
+    const a = await runHook(
+      'user-prompt-submit',
+      { session_id: 'orphan', prompt: 'check /etc/hosts' },
+      { store },
+    );
+    expect(a.ok).toBe(true);
+    const b = await runHook(
+      'post-tool-use',
+      {
+        session_id: 'orphan',
+        tool_name: 'Read',
+        tool_input: { file_path: '/etc/hosts' },
+        tool_response: { ok: true },
+      },
+      { store },
+    );
+    expect(b.ok).toBe(true);
+    const c = await runHook(
+      'stop',
+      { session_id: 'orphan', last_assistant_message: 'all set' },
+      { store },
+    );
+    expect(c.ok).toBe(true);
+    expect(store.storage.getSession('orphan')?.ide).toBe('unknown');
+    expect(store.timeline('orphan')).toHaveLength(2);
+  });
+
   it('post-tool-use accepts Claude Code field names (tool_name, tool_response)', async () => {
     await runHook(
       'session-start',
