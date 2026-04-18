@@ -131,7 +131,6 @@ export class MemoryStore {
       id: v.observation_id,
       cosine: cosine(qvec, v.vec),
     }));
-    const _bmByid = new Map(keyword.map((k) => [k.id, k.score]));
     const merged = new Map<number, { bm25?: number; cosine?: number }>();
     for (const k of keyword) merged.set(k.id, { bm25: k.score });
     for (const s of scored) {
